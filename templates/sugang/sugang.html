@@ -242,6 +242,9 @@
             const semester = document.getElementById('semester').value;
             const courseCode = document.getElementById('courseCode').value;
             const section = document.getElementById('section').value;
+            
+            document.getElementById('courseCode').value = ""
+            document.getElementById('section').value = ""
 
             fetchData(year, semester, courseCode, section).then(() => {
                 saveTableToLocalStorage();
@@ -331,7 +334,11 @@
             <!-- 행 여기에 추가 -->
         </tbody>
         </table>
+        <div style="text-align: left">
+            <p style="font-size: 14px">수강정원이 0명으로 표시된 과목은 작년 데이터로 대체함</p>
+        </div>
     </div>
+    
     <div style="margin-top: 300px">
         <form>
             <label for="start_date">수강신청 시작일:</label>
