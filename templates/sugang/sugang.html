@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sugang Information</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .table-container {
+            width: auto;
+            min-width: 1200px;
+            overflow-x: auto; /* 가로 스크롤 추가 */
+        }
+        table {
+            border-collapse: collapse;
+        }
+        th.sortable {
+            cursor: pointer;
+        }
+        th.sorted-asc::after, th.sorted-desc::after {
+            content: '';
+            display: inline-block;
+            margin-left: 5px;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 5px 4px 0 4px;
+            border-color: #000 transparent transparent transparent;
+        }
+        th.sorted-desc::after {
+            border-width: 0 4px 5px 4px;
+            border-color: transparent transparent #000 transparent;
+        }
+        th, td {
+            padding: 8px;
+            text-align: center;
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1;
+            const defaultSemester = currentMonth >= 1 && currentMonth <= 6 ? 1 : 2;
+            const yearSelect = document.getElementById('year');
+            const semesterSelect = document.getElementById('semester');
+
+            yearSelect.value = localStorage.getItem('selectedYear') || currentYear;
+            semesterSelect.value = localStorage.getItem('selectedSemester') || defaultSemester;
+
+            yearSelect.addEventListener('change', () => {
+                localStorage.setItem('selectedYear', yearSelect.value);
+            });
+
+            semesterSelect.addEventListener('change', () => {
+                localStorage.setItem('selectedSemester', semesterSelect.value);
+            });
+
+            loadTableFromLocalStorage();
+        });
+
+        async function addRow(data) {
+            const table = document.getElementById('sugangTable').getElementsByTagName('tbody')[0];
+            const newRow = table.insertRow();
+
+            Object.keys(data).forEach(key => {
+                const newCell = newRow.insertCell();
+                const newText = document.createTextNode(data[key]);
+                newCell.appendChild(newText);
+            });
+
+            // 수강정원 대비 수강인원의 비율 계산 및 마지막 열에 추가
+            const totalReg = parseInt(newRow.cells[11].textContent, 10);
+            const capacity = parseInt(newRow.cells[10].textContent, 10);
+            const ratioCell2 = newRow.insertCell();
+            if (!isNaN(totalReg) && !isNaN(capacity) && capacity > 0) {
+                const ratio = ((totalReg / capacity) * 100).toFixed(2);
+                ratioCell2.textContent = `${ratio}%`;
+            } else {
+                ratioCell2.textContent = 'N/A';
+            }
+
+
+            // 수강 신청 시작 날짜를 가져옵니다
+            const startDateValue = document.getElementById('start_date').value;
+            const startDate = new Date(startDateValue);
+            const today = new Date();
+
+            // 오전 10시 기준 시간 설정
+            const comparisonTime = new Date(startDate);
+            comparisonTime.setHours(10, 0, 0, 0);
+
+            console.log("start:", startDate)
+            console.log("today:", today)
+            console.log("comp:", comparisonTime)
+
+            // 각 셀 값을 숫자로 변환
+            const cell6 = parseFloat(newRow.cells[5].textContent);
+            const cell10 = parseFloat(newRow.cells[9].textContent);
+            const cell11 = parseFloat(newRow.cells[10].textContent);
+            const cell12 = parseFloat(newRow.cells[11].textContent);
+            const cell7 = parseFloat(newRow.cells[6].textContent);
+            const cell8 = parseFloat(newRow.cells[7].textContent);
+
+            // 새로운 셀을 생성
+            const ratioCell3 = newRow.insertCell();
+
+            // 날짜 차이를 계산
+            const dayDifference = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+
+            // 날짜 기준 시간과 현재 시간을 비교
+            const isBeforeComparisonTime = today < comparisonTime;
+
+            // 계산을 수행하고 결과를 새로운 셀에 추가
+            if (today < startDate || (today.toDateString() === startDate.toDateString() && isBeforeComparisonTime)) {
+                // 수강신청날짜 이전 또는 수강신청날짜 당일 오전 10시 이전
+                const ratio = (cell6 / (cell11 - cell10 + cell6)).toFixed(2);
+                ratioCell3.textContent = `${ratio}:1`;
+                console.log('before')
+            } else if (dayDifference === 0) {
+                // 수강신청날짜 당일 오전 10시 이후
+                const ratio = (cell6 / (cell11 - cell12 - cell7 - cell8)).toFixed(2);
+                ratioCell3.textContent = `${ratio}:1`;
+                console.log('D')
+            } else if (dayDifference === 1 || (dayDifference === 0 && isBeforeComparisonTime)) {
+                // 수강신청날짜로부터 하루가 지난 경우 또는 수강신청날짜 당일 오전 10시 이전
+                const ratio = (cell6 / (cell11 - cell12 - cell7)).toFixed(2);
+                ratioCell3.textContent = `${ratio}:1`;
+                console.log('D+1')
+            } else if (dayDifference === 2 || (dayDifference === 1 && isBeforeComparisonTime)) {
+                // 수강신청날짜로부터 이틀이 지난 경우 또는 하루 후 오전 10시 이전
+                const ratio = (cell6 / (cell11 - cell12)).toFixed(2);
+                ratioCell3.textContent = `${ratio}:1`;
+                console.log('D+2')
+            } else {
+                // 그 후
+                const ratio = (cell6 / cell10).toFixed(2);
+                ratioCell3.textContent = `${ratio}:1`;
+                console.log('after')
+            }
+
+            // N/A 처리
+            if (isNaN(cell6) || isNaN(cell10) || isNaN(cell11) || isNaN(cell12) || isNaN(cell7) || isNaN(cell8) || cell10 <= 0 || cell11 <= 0) {
+                ratioCell3.textContent = 'N/A';
+            }
+
+
+            // 수강정원 대비 예비수강전체인원의 비율 계산 및 마지막 열에 추가
+            //const totalPreRegCell = newRow.cells[9];
+            //const totalPreReg = parseInt(newRow.cells[9].textContent, 10);
+            //const ratioCell = newRow.insertCell();
+            //if (!isNaN(totalPreReg) && !isNaN(capacity) && capacity > 0) {
+                //const ratio = ((totalPreReg / capacity) * 100).toFixed(2);
+                
+                //totalPreRegCell.textContent += ` (${ratio}%)`;
+            //} else {
+                //totalPreRegCell.textContent += ` (???%)`;
+            //}
+
+
+            const deleteCell = newRow.insertCell();
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = '삭제';
+            deleteButton.onclick = function() {
+                table.deleteRow(newRow.rowIndex - 1);
+                saveTableToLocalStorage();
+            };
+            deleteCell.appendChild(deleteButton);
+
+            const sortState = JSON.parse(localStorage.getItem('sortState'));
+            if (sortState) {
+                sortTable(sortState.columnIndex, sortState.isAscending, true);
+            } else {
+                // 기본 정렬: 과목코드 오름차순
+                setTimeout(() => sortTable(2, true, true), 500);
+            }
+        }
+
+        async function fetchData(year, semester, courseCode, section) {
+            const response = await fetch('/s/info', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    {#'X-CSRFToken': '{{ csrf_token }}'#}
+                },
+                body: JSON.stringify({ year, semester, courseCode, section })
+            });
+
+            const data = await response.json();
+            if (response.status === 200) {
+                await addRow({ year, semester, courseCode, ...data });
+            } else {
+                alert("과목 추가 실패.")
+                removeFromLocalStorage(year, semester, courseCode, section);
+            }
+        }
+
+        function removeFromLocalStorage(year, semester, courseCode, section) {
+            const tableData = JSON.parse(localStorage.getItem('sugangTable') || '[]');
+            const newData = tableData.filter(rowData =>
+                rowData.year !== year ||
+                rowData.semester !== semester ||
+                rowData.courseCode !== courseCode ||
+                rowData.section !== section
+            );
+            localStorage.setItem('sugangTable', JSON.stringify(newData));
+        }
+
+        function saveTableToLocalStorage() {
+            const table = document.getElementById('sugangTable').getElementsByTagName('tbody')[0];
+            const rows = table.getElementsByTagName('tr');
+            const tableData = [];
+
+            for (let i = 0; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                const rowData = {
+                    year: cells[0].textContent,
+                    semester: cells[1].textContent,
+                    courseCode: cells[2].textContent,
+                    section: cells[3].textContent
+                };
+                tableData.push(rowData);
+            }
+
+            localStorage.setItem('sugangTable', JSON.stringify(tableData));
+        }
+
+        function loadTableFromLocalStorage() {
+            const tableData = JSON.parse(localStorage.getItem('sugangTable') || '[]');
+            const firstRow = tableData[0];
+            fetchData(firstRow.year, firstRow.semester, firstRow.courseCode, firstRow.section)
+                .then(() => {
+                    tableData.slice(1).forEach(rowData => {
+                        fetchData(rowData.year, rowData.semester, rowData.courseCode, rowData.section);
+                    })
+                })
+        }
+
+        function addEntry() {
+            const year = document.getElementById('year').value;
+            const semester = document.getElementById('semester').value;
+            const courseCode = document.getElementById('courseCode').value;
+            const section = document.getElementById('section').value;
+
+            fetchData(year, semester, courseCode, section).then(() => {
+                saveTableToLocalStorage();
+            })
+        }
+
+       function sortTable(columnIndex, initial = false, isAscending = null) {
+            const table = document.getElementById("sugangTable");
+            const tbody = table.getElementsByTagName("tbody")[0];
+            const rows = Array.from(tbody.getElementsByTagName("tr"));
+            const headers = table.getElementsByTagName("th");
+
+            const currentClass = headers[columnIndex].classList.contains('sorted-asc') ? 'sorted-asc' : 'sorted-desc';
+            const newClass = initial ? 'sorted-asc' : (currentClass === 'sorted-asc' ? 'sorted-desc' : 'sorted-asc');
+            const sortDirection = isAscending === null ? newClass === 'sorted-asc' : isAscending;
+
+            // Reset all header classes if not initial sort
+            if (!initial) {
+                for (let i = 0; i < headers.length; i++) {
+                    headers[i].classList.remove('sorted-asc', 'sorted-desc');
+                }
+            }
+
+            rows.sort((a, b) => {
+                const aText = a.getElementsByTagName("td")[columnIndex].textContent;
+                const bText = b.getElementsByTagName("td")[columnIndex].textContent;
+                return sortDirection ? aText.localeCompare(bText) : bText.localeCompare(aText);
+            });
+
+            headers[columnIndex].classList.add(newClass);
+
+            rows.forEach(row => tbody.appendChild(row));
+
+            if (!initial) {
+                localStorage.setItem('sortState', JSON.stringify({ columnIndex, isAscending: sortDirection }));
+            }
+        }
+    </script>
+</head>
+<body>
+    <h2>수강 정보</h2>
+    <form onsubmit="event.preventDefault(); addEntry();" style="margin-bottom: 20px">
+        <div style="margin-bottom: 10px">
+            <label for="year">연도:</label>
+            <select id="year" name="year">
+                <option value="2023">2023</option>
+                <option value="2024">2024</option>
+            </select>
+            <label for="semester">학기:</label>
+            <select id="semester" name="semester">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">여름</option>
+                <option value="4">겨울</option>
+            </select>
+        </div>
+        <div>
+            <label for="courseCode">과목코드:</label>
+            <input type="text" id="courseCode" name="courseCode" required>
+            <label for="section">분반:</label>
+            <input type="text" id="section" name="section" required>
+            <button type="submit">추가</button>
+        </div>
+    </form>
+    <div class="table-container">
+        <table id="sugangTable" border="1" style="overflow-x: scroll">
+        <thead>
+            <tr>
+                <th class="sortable" onclick="sortTable(0)">연도</th>
+                <th class="sortable" onclick="sortTable(1)">학기</th>
+                <th class="sortable" onclick="sortTable(2)">과목코드</th>
+                <th class="sortable" onclick="sortTable(3)">분반</th>
+                <th class="sortable" onclick="sortTable(4)">과목</th>
+                <th class="sortable" onclick="sortTable(5)">예비1</th>
+                <th class="sortable" onclick="sortTable(6)">2</th>
+                <th class="sortable" onclick="sortTable(7)">3</th>
+                <th class="sortable" onclick="sortTable(8)">4</th>
+                <th class="sortable" onclick="sortTable(9)">예비수강</th>
+                <th class="sortable" onclick="sortTable(10)">수강정원</th>
+                <th class="sortable" onclick="sortTable(11)">수강인원</th>
+                <th class="sortable" onclick="sortTable(12)">수강비율</th>
+                <th class="sortable" onclick="sortTable(13)">경쟁률(1학년)</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 행 여기에 추가 -->
+        </tbody>
+        </table>
+    </div>
+    <div style="margin-top: 300px">
+        <form>
+            <label for="start_date">수강신청 시작일:</label>
+            <input type="date" id="start_date" name="date" required>
+            <button id="date-submit" type="submit">설정</button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fetch the current start date
+            fetch('/s/start_date')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.start_date) {
+                        document.getElementById('start_date').value = data.start_date;
+                    }
+                });
+
+            // Add event listener to the button
+            document.getElementById('date-submit').addEventListener('click', async (event) => {
+                event.preventDefault();
+
+                const dateValue = document.getElementById('start_date').value;
+
+                const response = await fetch('/s/start_date', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ date: dateValue })
+                })
+                const data = await response.json()
+                if (response.status !== 200) {
+                    alert("설정 실패")
+                }
+            });
+        });
+    </script>
+</body>
+</html>
