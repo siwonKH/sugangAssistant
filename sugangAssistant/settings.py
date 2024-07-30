@@ -9,11 +9,11 @@ PASSWORD = os.getenv("PASS")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'e)jqqn4_zakm&!b!og^zawz=r23mwz=r23mr!*e%qvi4r!*e%q6r=#%b'
+SECRET_KEY = os.getenv("SECRET_KEY")
 
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 SESSION_EXIST = False
 
