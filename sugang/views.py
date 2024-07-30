@@ -25,6 +25,10 @@ class GetInfoView(View):
         print(f"{year}, {semester}, {course_code}, {section}")
 
         result = get_hisnet_info(year, semester, course_code, section)
+
+        if int(result["수강정원"]) == 0:
+            result["수강정원"] = get_hisnet_info(f"{int(year)-1}", semester, course_code, section)["수강정원"]
+
         if result is None:
             return JsonResponse({}, status=404)
         return JsonResponse(result)
