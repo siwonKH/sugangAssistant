@@ -365,7 +365,9 @@
                     body: JSON.stringify({ date: dateValue })
                 })
                 const data = await response.json()
-                if (response.status !== 200) {
+                if (response.status === 200) {
+                    alert("설정 완료")
+                } else {
                     alert("설정 실패")
                 }
             });
